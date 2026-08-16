@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+      initial-scale=1,
+      maximum-scale=1,
+      user-scalable=no">
+
+<title>Whispering Woods</title>
+
+<style>
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #070a08;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    width: 100vw;
+    height: 100vh;
+    max-width: 900px;
+    max-height: 600px;
+    image-rendering: pixelated;
+    background: #101712;
+}
+
+/* CLASS SCREEN */
+
+#classScreen {
+    position: fixed;
+    inset: 0;
+    background: rgba(4,7,5,.96);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    padding: 20px;
+}
+
+.panel {
+    width: 100%;
+    max-width: 600px;
+    background: #151b17;
+    border: 2px solid #596357;
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 20px 60px black;
+}
+
+.panel h1 {
+    margin-top: 0;
+    font-size: 30px;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    color: #aeb7aa;
+    margin-bottom: 22px;
+}
+
+.classes {
+    display: flex;
+    gap: 10px;
+}
+
+.classButton {
+    flex: 1;
+    padding: 18px 10px;
+    background: #202820;
+    border: 1px solid #596357;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.classButton:active {
+    background: #344034;
+}
+
+.classButton small {
+    display: block;
+    margin-top: 8px;
+    color: #adb7aa;
+    font-weight: normal;
+    font-size: 11px;
+}
+
+/* HUD */
+
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    text-shadow: 2px 2px black;
+    pointer-events: none;
+}
+
+/* MESSAGE */
+
+#message {
+    position: fixed;
+    bottom: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(3,5,4,.9);
+    border: 1px solid #687568;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    display: none;
+    max-width: 85%;
+}
+
+/* CONTROLS */
+
+#controls {
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    height: 120px;
+    pointer-events: none;
+}
+
+.control {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: rgba(35,45,38,.9);
+    border: 1px solid #687568;
+    color: white;
+    border-radius: 8px;
+    font-size: 18px;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.up {
+    left: 40px;
+}
+
+.left {
+    left: 0;
+    top: 42px;
+}
+
+.down {
+    left: 40px;
+    top: 42px;
+}
+
+.right {
+    left: 80px;
+    top: 42px;
+}
+
+.attack {
+    right: 0;
+    top: 20px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* SMALL SCREENS */
+
+@media(max-width:500px) {
+
+    .classes {
+        flex-direction: column;
+    }
+
+    .panel {
+        padding: 18px;
+    }
+
+    .panel h1 {
+        font-size: 25px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="game"
+        width="450"
+        height="300">
+</canvas>
+
+<!-- CLASS SELECTION -->
+
+<div id="classScreen">
+
+    <div class="panel">
+
+        <h1>WHISPERING WOODS</h1>
+
+        <div class="subtitle">
+            You awaken alone beneath ancient trees.
+            Somewhere beyond the forest lies a village.
+        </div>
+
+        <div class="classes">
+
+            <button class="classButton"
+                    onclick="chooseClass('Melee')">
+
+                ⚔️ MELEE
+
+                <small>
+                    Heavy armor<br>
+                    High health<br>
+                    Powerful close combat
+                </small>
+
+            </button>
+
+            <button class="classButton"
+                    onclick="chooseClass('Ranger')">
+
+                🏹 RANGER
+
+                <small>
+                    Fast movement<br>
+                    Ranged attacks<br>
+                    Balanced health
+                </small>
+
+            </button>
+
+            <button class="classButton"
+                    onclick="chooseClass('Wizard')">
+
+                🔮 WIZARD
+
+                <small>
+                    Powerful magic<br>
+                    Long range<br>
+                    Low health
+                </small>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div id="hud"></div>
+
+<div id="message"></div>
+
+<!-- MOBILE CONTROLS -->
+
+<div id="controls">
+
+    <button class="control up"
+            data-key="up">
+        ▲
+    </button>
+
+    <button class="control left"
+            data-key="left">
+        ◀
+    </button>
+
+    <button class="control down"
+            data-key="down">
+        ▼
+    </button>
+
+    <button class="control right"
+            data-key="right">
+        ▶
+    </button>
+
+    <button class="control attack"
+            data-key="attack">
+        ATTACK
+    </button>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   WHISPERING WOODS
+   ========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const WIDTH = 450;
+const HEIGHT = 300;
+
+let selectedClass = null;
+
+let player = null;
+
+let enemies = [];
+
+let keys = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    attack: false
+};
+
+let messageTimer = 0;
+
+
+/* =========================================================
+   WORLD
+   ========================================================= */
+
+const village = {
+    x: 350,
+    y: 40,
+    width: 95,
+    height: 80
+};
+
+const chest = {
+    x: 300,
+    y: 150,
+    opened: false
+};
+
+
+/* =========================================================
+   RANDOM TREES
+   ========================================================= */
+
+const trees = [];
+
+for (let i = 0; i < 90; i++) {
+
+    let x = Math.random() * WIDTH;
+    let y = Math.random() * HEIGHT;
+
+    /*
+       Keep the village area relatively clear.
+    */
+
+    if (x > 335 && y < 130) {
+        continue;
+    }
+
+    trees.push({
+        x: x,
+        y: y,
+        size: 6 + Math.random() * 7
+    });
+
+}
+
+
+/* =========================================================
+   CLASS SELECTION
+   ========================================================= */
+
+function chooseClass(type) {
+
+    selectedClass = type;
+
+    document.getElementById("classScreen").style.display = "none";
+
+    if (type === "Melee") {
+
+        player = {
+            x: 35,
+            y: 250,
+            hp: 125,
+            maxHp: 125,
+            damage: 17,
+            speed: 1.35,
+            range: 22,
+            level: 1,
+            xp: 0
+        };
+
+    }
+
+    if (type === "Ranger") {
+
+        player = {
+            x: 35,
+            y: 250,
+            hp: 100,
+            maxHp: 100,
+            damage: 13,
+            speed: 1.8,
+            range: 48,
+            level: 1,
+            xp: 0
+        };
+
+    }
+
+    if (type === "Wizard") {
+
+        player = {
+            x: 35,
+            y: 250,
+            hp: 75,
+            maxHp: 75,
+            damage: 21,
+            speed: 1.5,
+            range: 55,
+            level: 1,
+            xp: 0
+        };
+
+    }
+
+
+    enemies = [
+
+        {
+            x: 120,
+            y: 90,
+            hp: 25,
+            maxHp: 25,
+            type: "Wolf",
+            speed: .22
+        },
+
+        {
+            x: 230,
+            y: 180,
+            hp: 35,
+            maxHp: 35,
+            type: "Bandit",
+            speed: .18
+        }
+
+    ];
+
+    showMessage(
+        "You awaken in the forest. Find Briarwatch Village."
+    );
+
+}
+
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+function showMessage(text) {
+
+    const box = document.getElementById("message");
+
+    box.textContent = text;
+
+    box.style.display = "block";
+
+    messageTimer = 180;
+
+}
+
+
+/* =========================================================
+   MOVEMENT
+   ========================================================= */
+
+function updatePlayer() {
+
+    if (!player) return;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (keys.left) dx--;
+    if (keys.right) dx++;
+
+    if (keys.up) dy--;
+    if (keys.down) dy++;
+
+    if (dx !== 0 || dy !== 0) {
+
+        const length = Math.sqrt(
+            dx * dx + dy * dy
+        );
+
+        dx /= length;
+        dy /= length;
+
+        player.x += dx * player.speed;
+        player.y += dy * player.speed;
+
+    }
+
+
+    /* Keep player inside world */
+
+    player.x = Math.max(
+        5,
+        Math.min(
+            WIDTH - 18,
+            player.x
+        )
+    );
+
+    player.y = Math.max(
+        18,
+        Math.min(
+            HEIGHT - 18,
+            player.y
+        )
+    );
+
+}
+
+
+/* =========================================================
+   ATTACK
+   ========================================================= */
+
+let attackCooldown = 0;
+
+function attack() {
+
+    if (!player) return;
+
+    if (attackCooldown > 0) return;
+
+    attackCooldown = 25;
+
+    let target = null;
+
+    let closestDistance = 9999;
+
+
+    for (const enemy of enemies) {
+
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+
+        const distance = Math.sqrt(
+            dx * dx + dy * dy
+        );
+
+        if (
+            distance <
+            player.range + 10
+            &&
+            distance < closestDistance
+        ) {
+
+            target = enemy;
+            closestDistance = distance;
+
+        }
+
+    }
+
+
+    if (!target) {
+
+        showMessage("Nothing is in range.");
+
+        return;
+
+    }
+
+
+    target.hp -= player.damage;
+
+
+    if (selectedClass === "Wizard") {
+
+        showMessage(
+            "Dark magic strikes the " +
+            target.type + "!"
+        );
+
+    }
+
+    else if (selectedClass === "Ranger") {
+
+        showMessage(
+            "Your arrow strikes the " +
+            target.type + "!"
+        );
+
+    }
+
+    else {
+
+        showMessage(
+            "Your weapon strikes the " +
+            target.type + "!"
+        );
+
+    }
+
+
+    if (target.hp <= 0) {
+
+        enemies = enemies.filter(
+            enemy => enemy !== target
+        );
+
+        player.xp += 15;
+
+        showMessage(
+            target.type +
+            " defeated! +15 XP"
+        );
+
+
+        /* LEVEL UP */
+
+        if (player.xp >= 30) {
+
+            player.level++;
+
+            player.xp = 0;
+
+            player.damage += 3;
+
+            player.maxHp += 10;
+
+            player.hp = player.maxHp;
+
+            showMessage(
+                "LEVEL UP! You are now level " +
+                player.level + "!"
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   ENEMY AI
+   ========================================================= */
+
+function updateEnemies() {
+
+    if (!player) return;
+
+    for (const enemy of enemies) {
+
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+
+        const distance = Math.sqrt(
+            dx * dx + dy * dy
+        );
+
+
+        /*
+           Enemies notice player nearby.
+        */
+
+        if (distance < 75) {
+
+            if (distance > 14) {
+
+                enemy.x +=
+                    (dx / distance) *
+                    enemy.speed;
+
+                enemy.y +=
+                    (dy / distance) *
+                    enemy.speed;
+
+            }
+
+            else {
+
+                /*
+                   Damage player.
+                */
+
+                player.hp -= 0.06;
+
+            }
+
+        }
+
+    }
+
+
+    /* Player death */
+
+    if (player.hp <= 0) {
+
+        showMessage(
+            "You have fallen in the forest..."
+        );
+
+        setTimeout(
+            resetGame,
+            1500
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+function resetGame() {
+
+    location.reload();
+
+}
+
+
+/* =========================================================
+   CHEST
+   ========================================================= */
+
+function checkChest() {
+
+    if (!player) return;
+
+    const dx = player.x - chest.x;
+    const dy = player.y - chest.y;
+
+    const distance = Math.sqrt(
+        dx * dx + dy * dy
+    );
+
+
+    if (distance < 25) {
+
+        if (!chest.opened) {
+
+            chest.opened = true;
+
+            player.xp += 10;
+
+            showMessage(
+                "You found an old iron charm! +10 XP"
+            );
+
+        }
+
+        else {
+
+            showMessage(
+                "The chest is empty."
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   VILLAGE
+   ========================================================= */
+
+function checkVillage() {
+
+    if (!player) return;
+
+    if (
+        player.x > 340 &&
+        player.y < 130
+    ) {
+
+        showMessage(
+            "BRIARWATCH VILLAGE — " +
+            "Lanterns flicker behind locked doors..."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DRAW GROUND
+   ========================================================= */
+
+function drawGround() {
+
+    ctx.fillStyle = "#101712";
+
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    /*
+       Pixel grass.
+    */
+
+    for (let y = 0; y < HEIGHT; y += 12) {
+
+        for (let x = 0; x < WIDTH; x += 12) {
+
+            if (
+                (x + y) % 36 === 0
+            ) {
+
+                ctx.fillStyle = "#142019";
+
+                ctx.fillRect(
+                    x,
+                    y,
+                    12,
+                    12
+                );
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   DRAW TREES
+   ========================================================= */
+
+function drawTrees() {
+
+    for (const tree of trees) {
+
+        /*
+           trunk
+        */
+
+        ctx.fillStyle = "#38291f";
+
+        ctx.fillRect(
+            tree.x - 2,
+            tree.y,
+            4,
+            12
+        );
+
+
+        /*
+           leaves
+        */
+
+        ctx.fillStyle = "#1d462b";
+
+        ctx.fillRect(
+            tree.x - tree.size,
+            tree.y - tree.size,
+            tree.size * 2,
+            tree.size * 1.5
+        );
+
+
+        ctx.fillStyle = "#2a6037";
+
+        ctx.fillRect(
+            tree.x - tree.size + 2,
+            tree.y - tree.size + 2,
+            tree.size,
+            5
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DRAW VILLAGE
+   ========================================================= */
+
+function drawVillage() {
+
+    /*
+       village ground
+    */
+
+    ctx.fillStyle = "#35372f";
+
+    ctx.fillRect(
+        village.x,
+        village.y,
+        village.width,
+        village.height
+    );
+
+
+    /*
+       house one
+    */
+
+    ctx.fillStyle = "#70513c";
+
+    ctx.fillRect(
+        355,
+        58,
+        30,
+        35
+    );
+
+
+    /*
+       house two
+    */
+
+    ctx.fillRect(
+        398,
+        53,
+        32,
+        40
+    );
+
+
+    /*
+       roofs
+    */
+
+    ctx.fillStyle = "#382a25";
+
+    ctx.fillRect(
+        352,
+        48,
+        38,
+        12
+    );
+
+    ctx.fillRect(
+        395,
+        43,
+        39,
+        12
+    );
+
+
+    /*
+       windows
+    */
+
+    ctx.fillStyle = "#d3b86d";
+
+    ctx.fillRect(
+        365,
+        70,
+        8,
+        10
+    );
+
+    ctx.fillRect(
+        409,
+        66,
+        8,
+        10
+    );
+
+
+    ctx.fillStyle = "#ddd";
+
+    ctx.font = "10px monospace";
+
+    ctx.fillText(
+        "BRIARWATCH",
+        350,
+        115
+    );
+
+}
+
+
+/* =========================================================
+   DRAW CHEST
+   ========================================================= */
+
+function drawChest() {
+
+    ctx.fillStyle =
+        chest.opened
+        ? "#493725"
+        : "#96652b";
+
+    ctx.fillRect(
+        chest.x,
+        chest.y,
+        14,
+        9
+    );
+
+
+    ctx.fillStyle = "#d4b54e";
+
+    ctx.fillRect(
+        chest.x + 5,
+        chest.y + 3,
+        3,
+        3
+    );
+
+}
+
+
+/* =========================================================
+   DRAW ENEMIES
+   ========================================================= */
+
+function drawEnemies() {
+
+    for (const enemy of enemies) {
+
+        if (enemy.type === "Wolf") {
+
+            ctx.fillStyle = "#77736c";
+
+        }
+
+        else {
+
+            ctx.fillStyle = "#7d3038";
+
+        }
+
+
+        ctx.fillRect(
+            enemy.x,
+            enemy.y,
+            15,
+            15
+        );
+
+
+        /*
+           Health bar
+        */
+
+        ctx.fillStyle = "#cc4444";
+
+        ctx.fillRect(
+            enemy.x,
+            enemy.y - 5,
+            15 *
+            (enemy.hp / enemy.maxHp),
+            2
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DRAW PLAYER
+   ========================================================= */
+
+function drawPlayer() {
+
+    if (!player) return;
+
+
+    let color = "#a34840";
+
+    if (selectedClass === "Ranger") {
+
+        color = "#4e8b50";
+
+    }
+
+    if (selectedClass === "Wizard") {
+
+        color = "#7155ba";
+
+    }
+
+
+    ctx.fillStyle = color;
+
+    ctx.fillRect(
+        player.x,
+        player.y,
+        13,
+        13
+    );
+
+
+    /*
+       eyes
+    */
+
+    ctx.fillStyle = "#fff";
+
+    ctx.fillRect(
+        player.x + 3,
+        player.y + 3,
+        2,
+        2
+    );
+
+    ctx.fillRect(
+        player.x + 9,
+        player.y + 3,
+        2,
+        2
+    );
+
+}
+
+
+/* =========================================================
+   HUD
+   ========================================================= */
+
+function drawHUD() {
+
+    if (!player) return;
+
+    const hud =
+        document.getElementById("hud");
+
+    hud.textContent =
+        selectedClass +
+        "  •  Lv " +
+        player.level +
+        "  •  HP " +
+        Math.ceil(player.hp) +
+        "/" +
+        player.maxHp +
+        "  •  XP " +
+        player.xp +
+        "/30";
+
+}
+
+
+/* =========================================================
+   GAME UPDATE
+   ========================================================= */
+
+function update() {
+
+    updatePlayer();
+
+    updateEnemies();
+
+    if (attackCooldown > 0) {
+
+        attackCooldown--;
+
+    }
+
+
+    if (keys.attack) {
+
+        keys.attack = false;
+
+        attack();
+
+    }
+
+
+    checkVillage();
+
+    checkChest();
+
+
+    if (messageTimer > 0) {
+
+        messageTimer--;
+
+        if (messageTimer <= 0) {
+
+            document.getElementById(
+                "message"
+            ).style.display = "none";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME DRAW
+   ========================================================= */
+
+function draw() {
+
+    drawGround();
+
+    drawTrees();
+
+    drawVillage();
+
+    drawChest();
+
+    drawEnemies();
+
+    drawPlayer();
+
+    drawHUD();
+
+}
+
+
+/* =========================================================
+   MAIN LOOP
+   ========================================================= */
+
+function gameLoop() {
+
+    update();
+
+    draw();
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+}
+
+gameLoop();
+
+
+/* =========================================================
+   MOBILE CONTROLS
+   ========================================================= */
+
+document
+.querySelectorAll("[data-key]")
+.forEach(button => {
+
+    const key =
+        button.getAttribute("data-key");
+
+
+    button.addEventListener(
+        "pointerdown",
+        event => {
+
+            event.preventDefault();
+
+            keys[key] = true;
+
+        }
+    );
+
+
+    button.addEventListener(
+        "pointerup",
+        event => {
+
+            event.preventDefault();
+
+            keys[key] = false;
+
+        }
+    );
+
+
+    button.addEventListener(
+        "pointercancel",
+        () => {
+
+            keys[key] = false;
+
+        }
+    );
+
+});
+
+
+/* =========================================================
+   KEYBOARD SUPPORT
+   ========================================================= */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "ArrowUp" ||
+            event.key === "w") {
+
+            keys.up = true;
+
+        }
+
+        if (event.key === "ArrowDown" ||
+            event.key === "s") {
+
+            keys.down = true;
+
+        }
+
+        if (event.key === "ArrowLeft" ||
+            event.key === "a") {
+
+            keys.left = true;
+
+        }
+
+        if (event.key === "ArrowRight" ||
+            event.key === "d") {
+
+            keys.right = true;
+
+        }
+
+        if (event.key === " ") {
+
+            keys.attack = true;
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "keyup",
+    event => {
+
+        if (event.key === "ArrowUp" ||
+            event.key === "w") {
+
+            keys.up = false;
+
+        }
+
+        if (event.key === "ArrowDown" ||
+            event.key === "s") {
+
+            keys.down = false;
+
+        }
+
+        if (event.key === "ArrowLeft" ||
+            event.key === "a") {
+
+            keys.left = false;
+
+        }
+
+        if (event.key === "ArrowRight" ||
+            event.key === "d") {
+
+            keys.right = false;
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
