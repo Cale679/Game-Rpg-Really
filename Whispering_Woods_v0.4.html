@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Whispering Woods v0.3</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050706;color:#fff;font-family:system-ui,-apple-system,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;background:#0a100c}
+#classScreen{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(#030504ee,#07100add)}
+.panel{width:min(620px,92vw);padding:24px;background:#111814;border:1px solid #65705f;border-radius:16px;box-shadow:0 20px 80px #000;text-align:center}
+h1{font-family:Georgia,serif;letter-spacing:3px;margin:0 0 6px;font-size:29px}
+.sub{color:#aeb8aa;margin:0 0 18px;font-size:13px}
+.classes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.classButton{min-height:135px;border:1px solid #566252;border-radius:12px;background:linear-gradient(#202a22,#151c17);color:#fff;font-weight:800;font-size:16px}
+.classButton:active{transform:scale(.98);background:#2d392f}
+.classButton small{display:block;color:#aeb8aa;font-weight:400;font-size:11px;line-height:1.45;margin-top:9px}
+#hud{position:fixed;z-index:5;top:max(10px,env(safe-area-inset-top));left:12px;right:12px;pointer-events:none;text-shadow:2px 2px 3px #000;font:12px monospace}
+#hud .bar{width:160px;height:9px;border:1px solid #aaa;border-radius:3px;background:#111;margin-top:5px;overflow:hidden}
+#hp{height:100%;background:#a33}
+#message{position:fixed;z-index:8;left:50%;bottom:190px;transform:translateX(-50%);display:none;max-width:84%;padding:10px 14px;border:1px solid #697467;border-radius:10px;background:#050806e8;text-align:center;font-size:13px}
+#controls{position:fixed;z-index:10;left:0;right:0;bottom:max(16px,env(safe-area-inset-bottom));height:150px;pointer-events:none}
+.pad{position:absolute;left:18px;bottom:0;width:150px;height:150px;pointer-events:none}
+.btn{position:absolute;width:58px;height:58px;border-radius:15px;border:1px solid #7a8678;background:#182019d9;color:#fff;font-size:25px;box-shadow:0 4px 14px #0008;touch-action:none;pointer-events:auto}
+.up{left:46px;top:0}.left{left:0;top:48px}.down{left:46px;top:48px}.right{left:92px;top:48px}
+.attack{right:20px;bottom:18px;width:104px;height:104px;border-radius:50%;font-size:14px;font-weight:900;background:#3a201fd9}
+@media(max-width:520px){.classes{grid-template-columns:1fr}.classButton{min-height:82px}.panel{padding:18px}h1{font-size:24px}.message{bottom:175px}}
+
+#inventoryButton{position:fixed;z-index:11;top:58px;right:12px;width:82px;height:42px;border:1px solid #7a8678;border-radius:10px;background:#182019dd;color:#fff;font-weight:800;touch-action:none}
+#inventory{position:fixed;z-index:30;inset:0;display:none;align-items:center;justify-content:center;background:#030504e8;padding:16px}
+.invPanel{width:min(650px,92vw);max-height:82vh;overflow:auto;background:#111814;border:1px solid #65705f;border-radius:15px;padding:18px;box-shadow:0 20px 80px #000}
+.invHead{display:flex;justify-content:space-between;align-items:center}
+.invClose{background:#382321;color:#fff;border:1px solid #74504a;border-radius:8px;padding:8px 12px}
+.equip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.slot,.item{background:#192019;border:1px solid #4c594d;border-radius:9px;padding:10px}
+.slot b,.item b{display:block}
+.item{margin-top:7px}
+.rarity-common{border-color:#747b74}.rarity-uncommon{border-color:#69a86d}.rarity-rare{border-color:#5d86d9}.rarity-epic{border-color:#9b65cf}.rarity-legendary{border-color:#d49a43;box-shadow:0 0 10px #a66a2355}
+.item button{margin-top:7px;background:#303b31;color:#fff;border:1px solid #65705f;border-radius:7px;padding:6px 9px}
+@media(max-width:520px){.equip{grid-template-columns:1fr}.invPanel{max-height:78vh}}
+
+</style>
+</head>
+<body>
+<canvas id="game" width="480" height="320"></canvas>
+
+<div id="classScreen">
+  <div class="panel">
+    <h1>WHISPERING WOODS</h1>
+    <p class="sub">The forest remembers everyone who enters it. Find the lanterns of Briarwatch.</p>
+    <div class="classes">
+      <button class="classButton" onclick="chooseClass('Melee')">⚔️ MELEE<small>Heavy health<br>Devastating close attacks</small></button>
+      <button class="classButton" onclick="chooseClass('Ranger')">🏹 RANGER<small>Fast movement<br>Precise ranged attacks</small></button>
+      <button class="classButton" onclick="chooseClass('Wizard')">✦ WIZARD<small>Powerful magic<br>Fragile but deadly</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="hud"></div>
+<div id="message"></div>
+
+
+<button id="inventoryButton" onclick="toggleInventory()">🎒 INVENTORY</button>
+<div id="inventory">
+  <div class="invPanel">
+    <div class="invHead"><h2 style="margin:0">Inventory</h2><button class="invClose" onclick="toggleInventory()">CLOSE</button></div>
+    <div class="equip">
+      <div class="slot"><b>⚔️ Weapon</b><span id="weaponSlot">None equipped</span></div>
+      <div class="slot"><b>🛡️ Armor</b><span id="armorSlot">None equipped</span></div>
+    </div>
+    <div><b>Items & Loot</b><div id="items"></div></div>
+  </div>
+</div>
+<div id="controls">
+  <div class="pad">
+    <button class="btn up" data-key="up">▲</button>
+    <button class="btn left" data-key="left">◀</button>
+    <button class="btn down" data-key="down">▼</button>
+    <button class="btn right" data-key="right">▶</button>
+  </div>
+  <button class="btn attack" data-key="attack">ATTACK</button>
+</div>
+
+<script>
+const c=document.getElementById("game"),ctx=c.getContext("2d"),W=480,H=320;
+const WW=2200,WH=1500;
+let player=null,cls="",camera={x:0,y:0},enemies=[],trees=[],rocks=[],chests=[],effects=[],fireflies=[];
+const keys={up:0,down:0,left:0,right:0,attack:0};
+let cooldown=0,msg=0;
+
+function rnd(a,b){return Math.random()*(b-a)+a}
+function say(t,time=1700){const e=document.getElementById("message");e.textContent=t;e.style.display="block";msg=time}
+function chooseClass(q){
+ inventory=[];equipped={weapon:null,armor:null};
+ cls=q; document.getElementById("classScreen").style.display="none";
+ player=q==="Melee"?{x:120,y:1230,hp:145,max:145,dmg:19,spd:1.35,range:28,lv:1,xp:0}:
+ q==="Ranger"?{x:120,y:1230,hp:108,max:108,dmg:15,spd:1.9,range:72,lv:1,xp:0}:
+ {x:120,y:1230,hp:82,max:82,dmg:24,spd:1.52,range:82,lv:1,xp:0};
+ makeWorld();say("The woods are watching. Find Briarwatch.",2500);
+}
+function makeWorld(){
+ enemies=[];trees=[];rocks=[];chests=[];effects=[];fireflies=[];
+ for(let i=0;i<560;i++){let x=rnd(20,WW-20),y=rnd(20,WH-20);if(x>1720&&y<430)continue;trees.push({x,y,s:rnd(8,15),dark:Math.random()<.25})}
+ for(let i=0;i<140;i++)rocks.push({x:rnd(0,WW),y:rnd(0,WH),s:rnd(3,7)});
+ for(let i=0;i<32;i++){let type=Math.random()<.62?"Wolf":"Bandit";enemies.push({x:rnd(180,1600),y:rnd(100,1300),hp:type==="Wolf"?28:42,max:type==="Wolf"?28:42,type,speed:type==="Wolf"?.28:.2,hit:0})}
+ for(let i=0;i<18;i++)chests.push({x:rnd(120,1650),y:rnd(120,1320),open:false});
+ for(let i=0;i<90;i++)fireflies.push({x:rnd(0,WW),y:rnd(0,WH),p:rnd(0,Math.PI*2)});
+}
+function move(){
+ if(!player)return;let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);
+ if(dx||dy){let n=Math.hypot(dx,dy);player.x+=dx/n*player.spd;player.y+=dy/n*player.spd}
+ player.x=Math.max(15,Math.min(WW-15,player.x));player.y=Math.max(15,Math.min(WH-15,player.y));
+}
+function attack(){
+ if(!player||cooldown>0)return;cooldown=cls==="Melee"?22:cls==="Ranger"?30:38;
+ let t=null,b=9999;for(const e of enemies){let d=Math.hypot(e.x-player.x,e.y-player.y);if(d<player.range+12&&d<b){t=e;b=d}}
+ if(!t){say("Your attack cuts through empty air.",650);return}
+ t.hp-=player.dmg;effects.push({x:player.x,y:player.y,type:cls,life:18,tx:t.x,ty:t.y});
+ say(cls==="Wizard"?"Arcane fire erupts!":cls==="Ranger"?"Arrow released!":"Steel rings through the woods!",700);
+ if(t.hp<=0){enemies=enemies.filter(e=>e!==t);player.xp+=15;if(Math.random()<0.48){addLoot()}else{say(t.type+" defeated! +15 XP",1100)}if(player.xp>=30){player.xp=0;player.lv++;player.dmg+=4;player.max+=10;player.hp=player.max;say("LEVEL UP — Level "+player.lv+"!",1800)}}
+}
+function updateEnemies(){
+ for(const e of enemies){let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d<105){if(d>16){e.x+=dx/d*e.speed;e.y+=dy/d*e.speed}else if(e.hit<=0){player.hp-=5;e.hit=55;say("Something struck you!",500)}}if(e.hit>0)e.hit--}
+ if(player.hp<=0){say("The forest claims you...",1600);setTimeout(()=>location.reload(),1200)}
+}
+function update(){
+ if(!player)return;move();
+ camera.x=Math.max(0,Math.min(WW-W,player.x-W/2));camera.y=Math.max(0,Math.min(WH-H,player.y-H/2));
+ updateEnemies();
+ for(const ch of chests){if(!ch.open&&!ch.open&&Math.hypot(player.x-ch.x,player.y-ch.y)<24){ch.open=true;player.xp+=10;say("Hidden chest found! +10 XP",1400)}}
+ if(player.x>1720&&player.y<430)say("BRIARWATCH — lanterns burn behind wooden walls.",1200);
+ if(cooldown>0)cooldown--; if(keys.attack){keys.attack=0;attack()}
+ for(const ef of effects)ef.life--;effects=effects.filter(e=>e.life>0);
+ if(msg>0){msg-=16;if(msg<=0)document.getElementById("message").style.display="none"}
+}
+function forest(){
+ ctx.fillStyle="#0d1510";ctx.fillRect(0,0,W,H);
+ for(let y=0;y<H;y+=16)for(let x=0;x<W;x+=16){let wx=x+camera.x,wy=y+camera.y;if((Math.floor(wx/16)+Math.floor(wy/16))%7===0){ctx.fillStyle="#111d14";ctx.fillRect(x,y,15,15)}}
+ // winding road
+ ctx.strokeStyle="#3a352b";ctx.lineWidth=34;ctx.beginPath();ctx.moveTo(WW-480-camera.x,WH-camera.y);ctx.bezierCurveTo(WW-520-camera.x,900-camera.y,WW-300-camera.x,650-camera.y,WW-400-camera.x,390-camera.y);ctx.stroke();
+ // distant mist bands
+ ctx.fillStyle="#1d2920aa";ctx.fillRect(0,70, W,28);ctx.fillStyle="#26312866";ctx.fillRect(0,112,W,20);
+}
+function drawTrees(){
+ for(const t of trees){let x=t.x-camera.x,y=t.y-camera.y;if(x<-35||x>W+35||y<-45||y>H+45)continue;
+  ctx.fillStyle="#2a1d18";ctx.fillRect(x-3,y+2,6,18);
+  ctx.fillStyle=t.dark?"#102c1c":"#173d24";ctx.fillRect(x-t.s,y-t.s,t.s*2,t.s*1.7);
+  ctx.fillStyle="#285a34";ctx.fillRect(x-t.s+2,y-t.s+2,t.s*1.2,5);
+  ctx.fillStyle="#0b1d12";ctx.fillRect(x-t.s/2,y+t.s*.5,t.s,3);
+ }
+}
+function drawVillage(){
+ let x=1720-camera.x,y=55-camera.y;if(x>W||x+300<0)return;
+ ctx.fillStyle="#2a302a";ctx.fillRect(x,y,300,375);
+ ctx.fillStyle="#4b3d31";ctx.fillRect(x+25,y+55,78,68);ctx.fillRect(x+145,y+42,95,78);ctx.fillRect(x+75,y+175,90,72);
+ ctx.fillStyle="#241b19";ctx.fillRect(x+18,y+40,92,17);ctx.fillRect(x+138,y+26,108,17);ctx.fillRect(x+68,y+159,105,17);
+ ctx.fillStyle="#d1ad5d";ctx.fillRect(x+52,y+91,13,28);ctx.fillRect(x+183,y+85,14,35);ctx.fillRect(x+112,y+210,15,37);
+ ctx.fillStyle="#72553b";ctx.fillRect(x+122,y+255,8,45);ctx.fillStyle="#ad8950";ctx.fillRect(x+83,y+244,86,30);
+ ctx.fillStyle="#eee";ctx.font="11px monospace";ctx.fillText("BRIARWATCH",x+92,y+263);
+}
+function drawObjects(){
+ for(const r of rocks){let x=r.x-camera.x,y=r.y-camera.y;if(x<0||x>W||y<0||y>H)continue;ctx.fillStyle="#3c4540";ctx.fillRect(x,y,r.s*2,r.s)}
+ for(const ch of chests){let x=ch.x-camera.x,y=ch.y-camera.y;if(x<0||x>W||y<0||y>H)continue;ctx.fillStyle=ch.open?"#473624":"#9b692e";ctx.fillRect(x,y,15,10);ctx.fillStyle="#d8b64f";ctx.fillRect(x+6,y+3,3,3)}
+ for(const e of enemies){let x=e.x-camera.x,y=e.y-camera.y;if(x<-25||x>W+25||y<-25||y>H+25)continue;
+  ctx.fillStyle=e.type==="Wolf"?"#74746f":"#7c3239";ctx.fillRect(x,y,16,16);
+  if(e.type==="Wolf"){ctx.fillStyle="#aaa";ctx.fillRect(x+2,y-3,3,4);ctx.fillRect(x+11,y-3,3,4)}
+  else{ctx.fillStyle="#241d1a";ctx.fillRect(x+4,y+2,8,5)}
+  ctx.fillStyle="#b43d3d";ctx.fillRect(x,y-5,16*(e.hp/e.max),2);
+ }
+}
+function drawEffects(){
+ for(const ef of effects){let x=ef.x-camera.x,y=ef.y-camera.y,tx=ef.tx-camera.x,ty=ef.ty-camera.y;ctx.globalAlpha=Math.max(0,ef.life/18);
+  if(ef.type==="Wizard"){ctx.strokeStyle="#b99aff";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();ctx.fillStyle="#d6baff";ctx.fillRect(tx-4,ty-4,8,8)}
+  else if(ef.type==="Ranger"){ctx.strokeStyle="#ddd";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke()}
+  else{ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke()}
+ }ctx.globalAlpha=1;
+}
+function drawPlayer(){
+ if(!player)return;let x=W/2,y=H/2;
+ // shadow
+ ctx.fillStyle="#0008";ctx.fillRect(x-9,y+8,18,5);
+ if(cls==="Melee"){ctx.fillStyle="#6d3030";ctx.fillRect(x-7,y-7,14,16);ctx.fillStyle="#9e8060";ctx.fillRect(x-5,y-12,10,7);ctx.fillStyle="#b7b7b7";ctx.fillRect(x+7,y-3,13,3)}
+ if(cls==="Ranger"){ctx.fillStyle="#315b38";ctx.fillRect(x-7,y-6,14,15);ctx.fillStyle="#a98460";ctx.fillRect(x-4,y-12,9,7);ctx.strokeStyle="#c6a56d";ctx.beginPath();ctx.arc(x+10,y,8,-1.1,1.1);ctx.stroke()}
+ if(cls==="Wizard"){ctx.fillStyle="#453174";ctx.fillRect(x-7,y-6,14,16);ctx.fillStyle="#b08a66";ctx.fillRect(x-4,y-12,9,7);ctx.fillStyle="#24183e";ctx.beginPath();ctx.moveTo(x-9,y-11);ctx.lineTo(x+5,y-11);ctx.lineTo(x-2,y-22);ctx.closePath();ctx.fill();ctx.fillStyle="#d2b7ff";ctx.fillRect(x+9,y-7,3,3)}
+}
+function drawFireflies(){
+ for(const f of fireflies){let x=f.x-camera.x,y=f.y-camera.y;if(x<0||x>W||y<0||y>H)continue;let a=.35+.3*Math.sin(performance.now()/500+f.p);ctx.globalAlpha=a;ctx.fillStyle="#c5d58d";ctx.fillRect(x,y,2,2)}ctx.globalAlpha=1;
+}
+function draw(){
+ forest();drawVillage();drawTrees();drawObjects();drawEffects();drawFireflies();drawPlayer();
+ if(player){document.getElementById("hud").innerHTML=`<b>${cls}</b> • Lv ${player.lv} • HP ${Math.ceil(player.hp)}/${player.max}<div class="bar"><div id="hp" style="width:${Math.max(0,player.hp/player.max*100)}%"></div></div>XP ${player.xp}/30${equipped.weapon?` • ⚔️ ${equipped.weapon.rarity}`:""}`}
+}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+
+document.querySelectorAll("[data-key]").forEach(b=>{let k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=1},off=e=>{e.preventDefault();keys[k]=0};b.addEventListener("pointerdown",on);b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("pointerleave",off)});
+document.addEventListener("keydown",e=>{if(e.key==="ArrowUp"||e.key==="w")keys.up=1;if(e.key==="ArrowDown"||e.key==="s")keys.down=1;if(e.key==="ArrowLeft"||e.key==="a")keys.left=1;if(e.key==="ArrowRight"||e.key==="d")keys.right=1;if(e.key===" ")keys.attack=1});
+document.addEventListener("keyup",e=>{if(e.key==="ArrowUp"||e.key==="w")keys.up=0;if(e.key==="ArrowDown"||e.key==="s")keys.down=0;if(e.key==="ArrowLeft"||e.key==="a")keys.left=0;if(e.key==="ArrowRight"||e.key==="d")keys.right=0});
+</script>
+</body>
+</html>
