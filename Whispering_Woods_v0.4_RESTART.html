@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Whispering Woods</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#060806;color:#fff;font-family:Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+canvas{width:100vw;height:100vh;image-rendering:pixelated;background:#0c140e}
+#classes{position:fixed;inset:0;z-index:20;background:#050705f5;display:flex;align-items:center;justify-content:center;padding:18px}
+.panel{width:min(600px,92vw);padding:22px;background:#111811;border:1px solid #687365;border-radius:15px;text-align:center;box-shadow:0 20px 70px #000}
+h1{font-family:Georgia,serif;letter-spacing:3px;margin:0 0 8px}
+.sub{color:#aab5a8;font-size:13px;margin-bottom:18px}
+.classgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.classbtn{min-height:125px;background:#1c261e;color:white;border:1px solid #596456;border-radius:11px;font-weight:bold;font-size:16px}
+.classbtn small{display:block;color:#aab5a8;font-weight:normal;font-size:11px;line-height:1.5;margin-top:8px}
+#hud{position:fixed;z-index:5;top:10px;left:12px;font:12px monospace;text-shadow:2px 2px #000;pointer-events:none}
+.hpbar{height:9px;width:165px;border:1px solid #aaa;background:#111;margin-top:4px}.hpfill{height:100%;background:#a33}
+#bagBtn{position:fixed;z-index:10;top:56px;right:12px;width:82px;height:44px;border-radius:10px;border:1px solid #879281;background:#182119e8;color:white;font-weight:bold}
+#msg{position:fixed;z-index:8;bottom:185px;left:50%;transform:translateX(-50%);display:none;background:#050806e8;border:1px solid #687568;border-radius:9px;padding:9px 13px;max-width:84%;text-align:center;font-size:13px}
+#controls{position:fixed;z-index:9;left:0;right:0;bottom:15px;height:150px;pointer-events:none}
+.pad{position:absolute;left:15px;bottom:0;width:155px;height:150px}
+.btn{position:absolute;width:60px;height:60px;border-radius:15px;border:1px solid #7b8878;background:#172119e8;color:white;font-size:25px;touch-action:none;pointer-events:auto;box-shadow:0 4px 12px #0008}
+.up{left:47px}.left{left:0;top:48px}.down{left:47px;top:48px}.right{left:94px;top:48px}
+.attack{right:18px;bottom:18px;width:105px;height:105px;border-radius:50%;font-size:14px;font-weight:bold;background:#3a211fe8}
+#inventory{position:fixed;z-index:30;inset:0;background:#020403ee;display:none;align-items:center;justify-content:center;padding:15px}
+.inv{width:min(650px,93vw);max-height:80vh;overflow:auto;background:#111811;border:1px solid #687365;border-radius:15px;padding:18px}
+.invhead{display:flex;justify-content:space-between;align-items:center}.close{background:#382321;color:#fff;border:1px solid #79504a;border-radius:8px;padding:8px 12px}
+.slot,.item{background:#182119;border:1px solid #536153;border-radius:9px;padding:10px;margin-top:9px}.item button{margin-top:7px;background:#2b382e;color:#fff;border:1px solid #687668;border-radius:7px;padding:7px 10px}
+.common{border-color:#777}.uncommon{border-color:#62a66a}.rare{border-color:#6388d8}.epic{border-color:#a467d0}.legendary{border-color:#d49b45;box-shadow:0 0 12px #a66a234d}
+@media(max-width:520px){.classgrid{grid-template-columns:1fr}.classbtn{min-height:78px}.panel{padding:17px}}
+</style>
+</head>
+<body>
+<canvas id="game" width="480" height="320"></canvas>
+
+<div id="classes">
+ <div class="panel">
+  <h1>WHISPERING WOODS</h1>
+  <div class="sub">You awaken beneath ancient trees. Find the lanterns of Briarwatch.</div>
+  <div class="classgrid">
+   <button class="classbtn" onclick="start('Melee')">⚔️ MELEE<small>High health<br>Strong close attacks</small></button>
+   <button class="classbtn" onclick="start('Ranger')">🏹 RANGER<small>Fast movement<br>Long-range attacks</small></button>
+   <button class="classbtn" onclick="start('Wizard')">🔮 WIZARD<small>Powerful magic<br>Long-range spells</small></button>
+  </div>
+ </div>
+</div>
+
+<div id="hud"></div>
+<button id="bagBtn" onclick="toggleBag()">🎒 BAG</button>
+<div id="msg"></div>
+
+<div id="inventory">
+ <div class="inv">
+  <div class="invhead"><h2>Inventory</h2><button class="close" onclick="toggleBag()">CLOSE</button></div>
+  <div class="slot"><b>⚔️ Equipped Weapon</b><div id="equipped">None</div></div>
+  <div><b style="display:block;margin-top:15px">Loot</b><div id="items"></div></div>
+ </div>
+</div>
+
+<div id="controls">
+ <div class="pad">
+  <button class="btn up" data-key="up">▲</button>
+  <button class="btn left" data-key="left">◀</button>
+  <button class="btn down" data-key="down">▼</button>
+  <button class="btn right" data-key="right">▶</button>
+ </div>
+ <button class="btn attack" data-key="attack">ATTACK</button>
+</div>
+
+<script>
+const c=document.getElementById("game"),x=c.getContext("2d"),W=480,H=320,WW=2000,WH=1400;
+let p=null,cls="",cam={x:0,y:0},enemies=[],trees=[],rocks=[],chests=[],drops=[],effects=[];
+let keys={up:0,down:0,left:0,right:0,attack:0},cool=0,msgTime=0,bag=[],weapon=null;
+
+const rarity=[
+ {n:"Common",m:1,cl:"common",chance:.60},
+ {n:"Uncommon",m:1.25,cl:"uncommon",chance:.24},
+ {n:"Rare",m:1.7,cl:"rare",chance:.11},
+ {n:"Epic",m:2.3,cl:"epic",chance:.045},
+ {n:"Legendary",m:3.3,cl:"legendary",chance:.005}
+];
+const names={
+ Melee:["Iron Sword","Hunter Axe","Knight Blade","Moonsteel Greatsword","Ember King Cleaver"],
+ Ranger:["Oak Bow","Hunter Longbow","Silverleaf Bow","Moonshadow Longbow","Starfall Bow"],
+ Wizard:["Apprentice Staff","Ashwood Staff","Runebound Staff","Moonfire Staff","Elder Star Staff"]
+};
+
+function say(t,ms=1600){const e=document.getElementById("msg");e.textContent=t;e.style.display="block";msgTime=ms}
+function start(q){
+ cls=q;document.getElementById("classes").style.display="none";bag=[];weapon=null;
+ p=q==="Melee"?{x:120,y:1200,hp:145,max:145,dmg:19,spd:1.35,range:27,lv:1,xp:0}:
+ q==="Ranger"?{x:120,y:1200,hp:108,max:108,dmg:15,spd:1.9,range:68,lv:1,xp:0}:
+ {x:120,y:1200,hp:82,max:82,dmg:24,spd:1.52,range:78,lv:1,xp:0};
+ world();say("The woods are watching. Find Briarwatch.",2300)
+}
+function world(){
+ trees=[];rocks=[];enemies=[];chests=[];effects=[];
+ for(let i=0;i<430;i++){let a=Math.random()*WW,b=Math.random()*WH;if(a>1550&&b<430)continue;trees.push({x:a,y:b,s:8+Math.random()*8,d:Math.random()<.25})}
+ for(let i=0;i<100;i++)rocks.push({x:Math.random()*WW,y:Math.random()*WH,s:3+Math.random()*5});
+ for(let i=0;i<24;i++){let t=Math.random()<.62?"Wolf":"Bandit";enemies.push({x:160+Math.random()*1350,y:100+Math.random()*1150,h:t==="Wolf"?28:42,max:t==="Wolf"?28:42,t,spd:t==="Wolf"?.27:.19,hit:0})}
+ for(let i=0;i<14;i++)chests.push({x:100+Math.random()*1400,y:100+Math.random()*1150,open:false})
+}
+function move(){
+ let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);
+ if(dx||dy){let n=Math.hypot(dx,dy);p.x+=dx/n*p.spd;p.y+=dy/n*p.spd}
+ p.x=Math.max(10,Math.min(WW-15,p.x));p.y=Math.max(10,Math.min(WH-15,p.y))
+}
+function roll(){let z=Math.random(),s=0;for(const r of rarity){s+=r.chance;if(z<=s)return r}return rarity[0]}
+function loot(){
+ let r=roll(),base=4+Math.floor(Math.random()*7),it={name:names[cls][Math.floor(Math.random()*names[cls].length)],rarity:r.n,cl:r.cl,dmg:Math.max(1,Math.round(base*r.m))};
+ bag.push(it);renderBag();say("💎 "+it.rarity+" "+it.name+"  +"+it.dmg+" damage",2200)
+}
+function equip(i){
+ let it=bag[i];if(!it)return;if(weapon)bag.push(weapon);weapon=it;bag.splice(i,1);
+ let base=cls==="Melee"?12:cls==="Ranger"?10:16;p.dmg=base+weapon.dmg;renderBag();say("Equipped "+it.name+"!",1200)
+}
+function renderBag(){
+ document.getElementById("equipped").textContent=weapon?weapon.name+" — "+weapon.rarity+" (+"+weapon.dmg+")":"None";
+ document.getElementById("items").innerHTML=bag.length?bag.map((it,i)=>`<div class="item ${it.cl}"><b>${it.rarity} ${it.name}</b><div>Weapon • +${it.dmg} damage</div><button onclick="equip(${i})">EQUIP</button></div>`).join(""):"<p style='color:#9ca79c'>No loot yet. Defeat enemies to find weapons.</p>"
+}
+function toggleBag(){let e=document.getElementById("inventory");e.style.display=e.style.display==="flex"?"none":"flex";renderBag()}
+function attack(){
+ if(cool>0)return;cool=cls==="Melee"?22:cls==="Ranger"?30:38;
+ let t=null,b=9999;for(const e of enemies){let d=Math.hypot(e.x-p.x,e.y-p.y);if(d<p.range+12&&d<b){t=e;b=d}}
+ if(!t){say("Nothing is in range.",700);return}
+ t.h-=p.dmg;effects.push({a:p.x,b:p.y,c:t.x,d:t.y,life:16,type:cls});say(cls==="Wizard"?"Arcane fire erupts!":cls==="Ranger"?"Arrow released!":"Steel strikes!",650);
+ if(t.h<=0){enemies=enemies.filter(e=>e!==t);p.xp+=15;if(Math.random()<.5)loot();else say(t.t+" defeated! +15 XP",1100);if(p.xp>=30){p.xp=0;p.lv++;p.dmg+=4;p.max+=10;p.hp=p.max;say("LEVEL UP — Level "+p.lv+"!",1800)}}
+}
+function enemiesUpdate(){
+ for(const e of enemies){let dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy);if(d<95){if(d>16){e.x+=dx/d*e.spd;e.y+=dy/d*e.spd}else if(e.hit<=0){p.hp-=5;e.hit=55;say("You were hit!",500)}}if(e.hit)e.hit--}
+ if(p.hp<=0){say("The forest claims you...",1500);setTimeout(()=>location.reload(),1100)}
+}
+function update(){
+ if(!p)return;move();cam.x=Math.max(0,Math.min(WW-W,p.x-W/2));cam.y=Math.max(0,Math.min(WH-H,p.y-H/2));
+ enemiesUpdate();for(const q of chests)if(!q.open&&Math.hypot(p.x-q.x,p.y-q.y)<24){q.open=true;p.xp+=10;say("Hidden chest! +10 XP",1400)}
+ if(p.x>1550&&p.y<430)say("BRIARWATCH — Lanterns burn behind wooden walls.",1200)
+ if(cool>0)cool--;if(keys.attack){keys.attack=0;attack()}
+ for(const e of effects)e.life--;effects=effects.filter(e=>e.life>0)
+ if(msgTime>0){msgTime-=16;if(msgTime<=0)document.getElementById("msg").style.display="none"}
+}
+function drawGround(){
+ x.fillStyle="#0d160f";x.fillRect(0,0,W,H);
+ for(let yy=0;yy<H;yy+=16)for(let xx=0;xx<W;xx+=16){let a=Math.floor((xx+cam.x)/16),b=Math.floor((yy+cam.y)/16);if((a*3+b*5)%11===0){x.fillStyle="#142117";x.fillRect(xx,yy,15,15)}}
+ x.strokeStyle="#3c372d";x.lineWidth=34;x.beginPath();x.moveTo(1500-cam.x,1400-cam.y);x.bezierCurveTo(1420-cam.x,950-cam.y,1660-cam.x,700-cam.y,1640-cam.x,390-cam.y);x.stroke()
+}
+function drawVillage(){
+ let X=1550-cam.x,Y=40-cam.y;if(X>W||X+320<0)return;
+ x.fillStyle="#2c312c";x.fillRect(X,Y,320,390);
+ const houses=[[25,55,75,68],[150,40,100,78],[78,180,95,72]];
+ for(const h of houses){x.fillStyle="#4d3d31";x.fillRect(X+h[0],Y+h[1],h[2],h[3]);x.fillStyle="#241b18";x.fillRect(X+h[0]-7,Y+h[1]-15,h[2]+14,16)}
+ x.fillStyle="#d0aa58";x.fillRect(X+53,Y+95,13,28);x.fillRect(X+190,Y+88,14,30);x.fillRect(X+118,Y+216,15,35);
+ x.fillStyle="#715238";x.fillRect(X+130,Y+260,8,50);x.fillStyle="#ae8950";x.fillRect(X+88,Y+249,94,29);x.fillStyle="#eee";x.font="11px monospace";x.fillText("BRIARWATCH",X+98,Y+268)
+}
+function drawWorld(){
+ drawGround();drawVillage();
+ for(const r of rocks){let X=r.x-cam.x,Y=r.y-cam.y;if(X<0||X>W||Y<0||Y>H)continue;x.fillStyle="#3b443e";x.fillRect(X,Y,r.s*2,r.s)}
+ for(const t of trees){let X=t.x-cam.x,Y=t.y-cam.y;if(X<-35||X>W+35||Y<-45||Y>H+45)continue;
+  x.fillStyle="#2b1d17";x.fillRect(X-3,Y+2,6,20);x.fillStyle="#40261a";x.fillRect(X-5,Y+9,3,12);
+  x.fillStyle=t.d?"#0c2817":"#123a21";x.fillRect(X-t.s,Y-t.s,t.s*2,t.s*1.7);x.fillStyle=t.d?"#174829":"#235c32";x.fillRect(X-t.s+2,Y-t.s+2,t.s*1.2,5);x.fillStyle="#2c6b3a";x.fillRect(X-t.s*.4,Y-t.s*.7,t.s*.8,4)
+ }
+ for(const q of chests){let X=q.x-cam.x,Y=q.y-cam.y;if(X<0||X>W||Y<0||Y>H)continue;x.fillStyle=q.open?"#473526":"#99662d";x.fillRect(X,Y,15,10);x.fillStyle="#d7b44d";x.fillRect(X+6,Y+3,3,3)}
+ for(const e of enemies){let X=e.x-cam.x,Y=e.y-cam.y;if(X<-25||X>W+25||Y<-25||Y>H+25)continue;x.fillStyle=e.t==="Wolf"?"#777873":"#79313a";x.fillRect(X,Y,16,16);x.fillStyle="#c33";x.fillRect(X,Y-5,16*(e.h/e.max),2);if(e.t==="Wolf"){x.fillStyle="#aaa";x.fillRect(X+2,Y-3,3,4);x.fillRect(X+11,Y-3,3,4)}}
+ for(const ef of effects){let X=ef.a-cam.x,Y=ef.b-cam.y,TX=ef.c-cam.x,TY=ef.d-cam.y;x.globalAlpha=ef.life/16;if(ef.type==="Wizard"){x.strokeStyle="#c1a3ff";x.lineWidth=3}else if(ef.type==="Ranger"){x.strokeStyle="#ddd";x.lineWidth=2}else{x.strokeStyle="#eee";x.lineWidth=4}x.beginPath();x.moveTo(X,Y);x.lineTo(TX,TY);x.stroke();x.globalAlpha=1}
+ drawPlayer()
+}
+function drawPlayer(){
+ let X=W/2,Y=H/2;x.fillStyle="#0008";x.fillRect(X-11,Y+10,22,5);
+ if(cls==="Melee"){x.fillStyle="#612d2d";x.fillRect(X-8,Y-5,16,18);x.fillStyle="#96785b";x.fillRect(X-5,Y-13,10,8);x.fillStyle="#777b7a";x.fillRect(X-8,Y-16,16,4);x.fillStyle="#c7c9c7";x.fillRect(X+8,Y-3,17,3)}
+ else if(cls==="Ranger"){x.fillStyle="#315c39";x.fillRect(X-8,Y-6,16,19);x.fillStyle="#a88460";x.fillRect(X-5,Y-13,10,8);x.fillStyle="#46372c";x.fillRect(X-8,Y-16,16,4);x.strokeStyle="#d0ae75";x.lineWidth=2;x.beginPath();x.arc(X+11,Y,10,-1.1,1.1);x.stroke()}
+ else{x.fillStyle="#443075";x.fillRect(X-8,Y-5,16,19);x.fillStyle="#ad8967";x.fillRect(X-5,Y-13,10,8);x.fillStyle="#24183d";x.beginPath();x.moveTo(X-11,Y-11);x.lineTo(X+6,Y-11);x.lineTo(X-2,Y-25);x.closePath();x.fill();x.fillStyle="#d5b5ff";x.fillRect(X+10,Y-5,3,3)}
+ x.fillStyle="#fff";x.fillRect(X-3,Y-8,2,2);x.fillRect(X+4,Y-8,2,2)
+}
+function draw(){drawWorld();if(p){document.getElementById("hud").innerHTML=`${cls} • Lv ${p.lv} • HP ${Math.ceil(p.hp)}/${p.max}<div class="hpbar"><div class="hpfill" style="width:${Math.max(0,p.hp/p.max*100)}%"></div></div>XP ${p.xp}/30${weapon?" • ⚔️ "+weapon.rarity:""}`}}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+
+document.querySelectorAll("[data-key]").forEach(b=>{let k=b.dataset.key;function on(e){e.preventDefault();keys[k]=1}function off(e){e.preventDefault();keys[k]=0}b.addEventListener("pointerdown",on);b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("pointerleave",off)});
+document.addEventListener("keydown",e=>{if(e.key==="ArrowUp"||e.key==="w")keys.up=1;if(e.key==="ArrowDown"||e.key==="s")keys.down=1;if(e.key==="ArrowLeft"||e.key==="a")keys.left=1;if(e.key==="ArrowRight"||e.key==="d")keys.right=1;if(e.key===" ")keys.attack=1});
+document.addEventListener("keyup",e=>{if(e.key==="ArrowUp"||e.key==="w")keys.up=0;if(e.key==="ArrowDown"||e.key==="s")keys.down=0;if(e.key==="ArrowLeft"||e.key==="a")keys.left=0;if(e.key==="ArrowRight"||e.key==="d")keys.right=0});
+</script>
+</body>
+</html>
